@@ -1,0 +1,16 @@
+[package]
+name    = "xenu"
+version = "0.1.0"
+
+authors = ["meh. <meh@schizofreni.co>"]
+license = "GPL-3.0"
+
+description = "X11 tools."
+repository  = "https://github.com/meh/xenu"
+keywords    = ["x11"]
+
+[dependencies]
+clap = "2"
+
+[workspace]
+members = []
