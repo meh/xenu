@@ -34,27 +34,34 @@ fn main() {
 			.short("f")
 			.long("frame")
 			.help("Do not ignore WM frames."))
+		.arg(Arg::with_name("button")
+			.short("b")
+			.long("button")
+			.takes_value(true)
+			.help("The mouse button to use (default is 1)."))
 		.arg(Arg::with_name("ID")
 			.index(1)
 			.help("The resource ID."))
 		.get_matches();
 
 	let (connection, screen) = xcb::Connection::connect(matches.value_of("display")).unwrap();
+	let button               = matches.value_of("button").map(|b| b.parse().unwrap()).unwrap_or(1);
+	let frame                = matches.value_of("frame").is_some();
+	let id                   = matches.value_of("ID").map(|id| id.parse().unwrap());
 
-	if let Some(id) = window_for(&connection, screen, matches.value_of("ID").map(|id| id.parse().unwrap())) {
-		if let Some(window) = xcbu::misc::client_window(&connection, id) {
-			xcb::kill_client_checked(&connection, window).request_check().unwrap();
+	if let Some(mut window) = id.or_else(|| select(&connection, screen, button)) {
+		if !frame {
+			if let Some(client) = xcbu::misc::client_window(&connection, window) {
+				window = client;
+			}
 		}
 
+		xcb::kill_client(&connection, window);
 		connection.flush();
 	}
 }
 
-fn window_for(c: &xcb::Connection, screen: i32, id: Option<u32>) -> Option<u32> {
-	if let Some(id) = id {
-		return Some(id);
-	}
-
+fn select(c: &xcb::Connection, screen: i32, button: u8) -> Option<u32> {
 	let root   = c.get_setup().roots().nth(screen as usize).unwrap().root();
 	let cursor = xcbu::cursor::create_font_cursor(c, xcbu::cursor::PIRATE);
 	let status = xcb::grab_pointer(c, false, root, xcb::EVENT_MASK_BUTTON_RELEASE as u16,
@@ -73,11 +80,16 @@ fn window_for(c: &xcb::Connection, screen: i32, id: Option<u32>) -> Option<u32> 
 				let event: &xcb::ButtonReleaseEvent = xcb::cast_event(&event);
 				let window = event.child();
 
-				if event.detail() == 1 && window != xcb::WINDOW_NONE {
-					selection = Some(window);
+				if event.detail() != button {
+					break;
 				}
 
-					break;
+				if window == xcb::WINDOW_NONE {
+					continue;
+				}
+
+				selection = Some(window);
+				break;
 			}
 
 			_ => ()
