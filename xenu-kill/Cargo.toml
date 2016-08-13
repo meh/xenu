@@ -1,0 +1,16 @@
+[package]
+name    = "xenu-kill"
+version = "0.1.0"
+
+authors = ["meh. <meh@schizofreni.co>"]
+license = "GPL-3.0"
+
+description = "Xenu is strong, and will kill any window you want and all of its children."
+repository  = "https://github.com/meh/xenu"
+keywords    = ["x11"]
+
+[dependencies]
+clap = "2"
+
+xcb      = { version = "0.7" }
+xcb-util = { version = "0.1", features = ["icccm", "cursor", "misc"] }

@@ -5,7 +5,7 @@ version = "0.1.0"
 authors = ["meh. <meh@schizofreni.co>"]
 license = "GPL-3.0"
 
-description = "X11 tools."
+description = "Your X11 galactic overlord."
 repository  = "https://github.com/meh/xenu"
 keywords    = ["x11"]
 
@@ -13,4 +13,4 @@ keywords    = ["x11"]
 clap = "2"
 
 [workspace]
-members = []
+members = ["xenu-kill"]

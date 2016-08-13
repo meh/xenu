@@ -29,6 +29,14 @@ fn main() {
 		.get_matches();
 
 	if let (name, Some(matches)) = matches.subcommand() {
-		Command::new(name).args(matches.values_of(name).unwrap().collect::<Vec<&str>>().as_ref()).exec();
+		let name = format!("xenu-{}", name);
+		let args = if let Some(args) = matches.values_of(&name) {
+			args.collect::<Vec<&str>>()
+		}
+		else {
+			vec![]
+		};
+
+		Command::new(&name).args(args.as_ref()).exec();
 	}
 }
