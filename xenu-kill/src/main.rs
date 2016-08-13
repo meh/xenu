@@ -22,9 +22,9 @@ extern crate xcb;
 extern crate xcb_util as xcbu;
 
 fn main() {
-	let matches = App::new("kill")
+	let matches = App::new("xenu-kill")
 		.version(env!("CARGO_PKG_VERSION"))
-		.author("meh. <meh@schizofreni.co>")
+		.about("Xenu is strong, and will kill any window you want and all of its children.")
 		.arg(Arg::with_name("display")
 			.short("d")
 			.long("display")
