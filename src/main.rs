@@ -22,13 +22,13 @@ extern crate clap;
 use clap::{App, AppSettings};
 
 fn main() {
-	let matches = App::new("xenu")
+	let mut app = App::new("xenu")
 		.version(env!("CARGO_PKG_VERSION"))
 		.author("meh. <meh@schizofreni.co>")
-		.setting(AppSettings::AllowExternalSubcommands)
-		.get_matches();
+		.about("Your X11 galactic overlord.")
+		.setting(AppSettings::AllowExternalSubcommands);
 
-	if let (name, Some(matches)) = matches.subcommand() {
+	if let (name, Some(matches)) = app.clone().get_matches().subcommand() {
 		let name = format!("xenu-{}", name);
 		let args = if let Some(args) = matches.values_of(&name) {
 			args.collect::<Vec<&str>>()
@@ -38,5 +38,9 @@ fn main() {
 		};
 
 		Command::new(&name).args(args.as_ref()).exec();
+	}
+	else {
+		app.print_help().unwrap();
+		println!("");
 	}
 }
