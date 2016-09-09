@@ -1,0 +1,17 @@
+[package]
+name    = "xenu-background"
+version = "0.1.0"
+
+authors = ["meh. <meh@schizofreni.co>"]
+license = "GPL-3.0"
+
+description = "Xenu is artistic, and will paint a background on your screen."
+repository  = "https://github.com/meh/xenu"
+keywords    = ["x11"]
+
+[dependencies]
+clap  = "2"
+image = "0.10"
+
+xcb      = { version = "0.7" }
+xcb-util = { version = "0.1", features = ["image", "shm"], path = "../../xcb-util" }
