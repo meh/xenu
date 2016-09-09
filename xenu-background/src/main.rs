@@ -19,7 +19,7 @@ extern crate clap;
 use clap::{App, Arg};
 
 extern crate image;
-use image::{GenericImage, Pixel};
+use image::GenericImage;
 
 extern crate xcb;
 extern crate xcb_util as xcbu;
@@ -52,13 +52,11 @@ fn main() {
 	let mut image = xcbu::image::shm::create(&connection, screen.root_depth(),
 		screen.width_in_pixels(), screen.height_in_pixels()).unwrap();
 
-	for (x, y, pixel) in source.pixels() {
-		let pixel = pixel.to_rgb();
-		let r = pixel[0] as u32;
-		let g = pixel[1] as u32;
-		let b = pixel[2] as u32;
-
-		image.put(x, y, (r << 16) | (g << 8) | b);
+	for (x, y, px) in source.pixels() {
+		image.put(x, y,
+			((px[0] as u32) << 16) |
+			((px[1] as u32) << 8)  |
+			((px[2] as u32) << 0));
 	}
 
 	let pixmap = connection.generate_id();
@@ -77,6 +75,10 @@ fn main() {
 	xcb::change_window_attributes_checked(&connection, screen.root(), &[
 		(xcb::CW_BACK_PIXMAP, pixmap)])
 			.request_check().expect("could not change attributes");
+
+	xcb::clear_area_checked(&connection, true, screen.root(), 0, 0,
+		screen.width_in_pixels(), screen.height_in_pixels())
+			.request_check().expect("could not clear root window");
 
 	connection.flush();
 }
