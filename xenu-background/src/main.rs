@@ -15,11 +15,22 @@
 // You should have received a copy of the GNU General Public License
 // along with xenu.  If not, see <http://www.gnu.org/licenses/>.
 
+use std::io::{self, Read};
+
 extern crate clap;
 use clap::{App, Arg};
 
 extern crate image;
-use image::GenericImage;
+use image::{GenericImage, DynamicImage};
+
+extern crate palette;
+use palette::{Rgb, Gradient};
+use palette::pixel::Srgb;
+
+#[macro_use]
+extern crate lazy_static;
+extern crate regex;
+use regex::Regex;
 
 extern crate xcb;
 extern crate xcb_util as xcbu;
@@ -39,21 +50,110 @@ fn main() {
 			.long("display")
 			.takes_value(true)
 			.help("The display to connect to."))
+		.arg(Arg::with_name("solid")
+			.short("s")
+			.long("solid")
+			.takes_value(true)
+			.required_unless("gradient")
+			.required_unless("PATH")
+			.help("Make a solid color background."))
+		.arg(Arg::with_name("gradient")
+			.short("g")
+			.long("gradient")
+			.multiple(true)
+			.takes_value(true)
+			.required_unless("PATH")
+			.required_unless("solid")
+			.help("Define a gradient as background."))
+		.arg(Arg::with_name("horizontal")
+			.short("-H")
+			.long("horizontal")
+			.requires("gradient")
+			.help("Make an horizontal gradient (this is the default)."))
+		.arg(Arg::with_name("vertical")
+			.short("V")
+			.long("vertical")
+			.requires("gradient")
+			.help("Make a vertical gradient."))
 		.arg(Arg::with_name("PATH")
 			.index(1)
-			.required(true)
+			.required_unless("solid")
+			.required_unless("gradient")
 			.help("Path to the image to use."))
+		.arg(Arg::with_name("flip")
+			.short("f")
+			.long("flip")
+			.multiple(true)
+			.takes_value(true)
+			.help("Flip the loaded image (takes `vertical` and `horizontal`."))
 		.get_matches();
-
-	let path = matches.value_of("PATH").unwrap();
 
 	let (connection, screen) = xcb::Connection::connect(matches.value_of("display")).unwrap();
 	let setup  = connection.get_setup();
 	let screen = setup.roots().nth(screen as usize).unwrap();
 
-	// Open the given path and resize it to fit the screen.
-	let mut source = image::open(path).expect("failed to open image");
+	let mut source = if let Some(path) = matches.value_of("PATH") {
+		if path == "-" {
+			let mut buffer = Vec::new();
+			io::stdin().read_to_end(&mut buffer).unwrap();
 
+			image::load_from_memory(&buffer).expect("failed to open image")
+		}
+		else {
+			image::open(path).expect("failed to open image")
+		}
+	}
+	else if let Some(colors) = matches.values_of("gradient") {
+		let mut source   = DynamicImage::new_rgb8(screen.width_in_pixels() as u32, screen.height_in_pixels() as u32);
+		let     gradient = Gradient::new(colors.map(|c| color(c).unwrap()));
+
+		if matches.is_present("vertical") {
+			for (y, color) in (0 .. source.height()).zip(gradient.take(source.height() as usize)) {
+				for x in 0 .. source.width() {
+					source.as_mut_rgb8().unwrap().put_pixel(x, y, srgb(color));
+				}
+			}
+		}
+		else {
+			for (x, color) in (0 .. source.width()).zip(gradient.take(source.width() as usize)) {
+				for y in 0 .. source.height() {
+					source.as_mut_rgb8().unwrap().put_pixel(x, y, srgb(color));
+				}
+			}
+		}
+
+		source
+	}
+	else if let Some(solid) = matches.value_of("solid") {
+		let mut source = DynamicImage::new_rgb8(screen.width_in_pixels() as u32, screen.height_in_pixels() as u32);
+		let     color  = color(solid).unwrap();
+
+		for px in source.as_mut_rgb8().unwrap().pixels_mut() {
+			*px = srgb(color);
+		}
+
+		source
+	}
+	else {
+		unreachable!();
+	};
+
+	// Flip the image as requested.
+	if let Some(flip) = matches.values_of("flip") {
+		for side in flip {
+			match side.to_lowercase().as_ref() {
+				"vertically" | "vertical" | "vert" | "v" =>
+					source = source.flipv(),
+
+				"horizontally" | "horizontal" | "horiz" | "h" =>
+					source = source.fliph(),
+
+				_ => ()
+			}
+		}
+	}
+
+	// If the source image isn't the right size, resize it.
 	if source.width() != screen.width_in_pixels() as u32 || source.height() != screen.height_in_pixels() as u32 {
 		source = source.resize(screen.width_in_pixels() as u32, screen.height_in_pixels() as u32,
 			image::FilterType::Lanczos3);
@@ -139,4 +239,28 @@ fn clean(c: &xcb::Connection, screen: &xcb::Screen) {
 	// Kill any temporary resources.
 	xcb::kill_client(c, xcb::KILL_ALL_TEMPORARY);
 	xcb::set_close_down_mode(c, xcb::CLOSE_DOWN_RETAIN_TEMPORARY as u8);
+}
+
+lazy_static! {
+	static ref HEX_RGB: Regex = Regex::new(r"#([:xdigit:]{2})([:xdigit:]{2})([:xdigit:]{2})").unwrap();
+}
+
+fn color(value: &str) -> Option<Rgb> {
+	HEX_RGB.captures(value.as_ref()).map(|captures| {
+		Rgb::new(
+			u8::from_str_radix(captures.at(1).unwrap_or("0"), 16).unwrap_or(0) as f32 / 255.0,
+			u8::from_str_radix(captures.at(2).unwrap_or("0"), 16).unwrap_or(0) as f32 / 255.0,
+			u8::from_str_radix(captures.at(3).unwrap_or("0"), 16).unwrap_or(0) as f32 / 255.0,
+		)
+	})
+}
+
+fn srgb(value: Rgb<f32>) -> image::Rgb<u8> {
+	let pixel = Srgb::from(value);
+
+	image::Rgb { data: [
+		(pixel.red * 255.0) as u8,
+		(pixel.green * 255.0) as u8,
+		(pixel.blue * 255.0) as u8,
+	] }
 }

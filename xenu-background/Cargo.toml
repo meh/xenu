@@ -10,8 +10,11 @@ repository  = "https://github.com/meh/xenu"
 keywords    = ["x11"]
 
 [dependencies]
-clap  = "2"
-image = "0.10"
+lazy_static = "0.1"
+xcb         = { version = "0.7" }
+xcb-util    = { version = "0.1", features = ["image", "shm"] }
 
-xcb      = { version = "0.7" }
-xcb-util = { version = "0.1", features = ["image", "shm"] }
+clap    = "2"
+image   = "0.10"
+palette = "0.2"
+regex   = "0.1"
