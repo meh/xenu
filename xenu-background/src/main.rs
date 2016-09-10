@@ -52,9 +52,12 @@ fn main() {
 	let screen = setup.roots().nth(screen as usize).unwrap();
 
 	// Open the given path and resize it to fit the screen.
-	let source = image::open(path).expect("failed to open image")
-		.resize(screen.width_in_pixels() as u32, screen.height_in_pixels() as u32,
+	let mut source = image::open(path).expect("failed to open image");
+
+	if source.width() != screen.width_in_pixels() as u32 || source.height() != screen.height_in_pixels() as u32 {
+		source = source.resize(screen.width_in_pixels() as u32, screen.height_in_pixels() as u32,
 			image::FilterType::Lanczos3);
+	}
 
 	clean(&connection, &screen);
 	set(&connection, &screen, source.to_rgb());
