@@ -13,4 +13,4 @@ keywords    = ["x11"]
 clap = "2"
 
 [workspace]
-members = ["xenu-kill"]
+members = ["xenu-kill", "xenu-background"]
