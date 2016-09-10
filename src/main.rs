@@ -28,19 +28,16 @@ fn main() {
 		.about("Your X11 galactic overlord.")
 		.setting(AppSettings::AllowExternalSubcommands);
 
-	if let (name, Some(matches)) = app.clone().get_matches().subcommand() {
-		let name = format!("xenu-{}", name);
-		let args = if let Some(args) = matches.values_of(&name) {
-			args.collect::<Vec<&str>>()
+	match app.clone().get_matches().subcommand() {
+		(name, Some(matches)) => {
+			Command::new(&format!("xenu-{}", name))
+				.args(matches.values_of("").map(|args| args.collect::<Vec<&str>>()).unwrap_or(vec![]).as_ref())
+				.exec();
 		}
-		else {
-			vec![]
-		};
 
-		Command::new(&name).args(args.as_ref()).exec();
-	}
-	else {
-		app.print_help().unwrap();
-		println!("");
+		_ => {
+			app.print_help().unwrap();
+			println!("");
+		}
 	}
 }
