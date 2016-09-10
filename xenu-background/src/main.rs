@@ -93,15 +93,15 @@ fn main() {
 	let screen = setup.roots().nth(screen as usize).unwrap();
 
 	let mut source = if let Some(path) = matches.value_of("PATH") {
-		if path == "-" {
+		if path != "-" {
+			image::open(path)
+		}
+		else {
 			let mut buffer = Vec::new();
 			io::stdin().read_to_end(&mut buffer).unwrap();
 
-			image::load_from_memory(&buffer).expect("failed to open image")
-		}
-		else {
-			image::open(path).expect("failed to open image")
-		}
+			image::load_from_memory(&buffer)
+		}.expect("failed to open image")
 	}
 	else if let Some(colors) = matches.values_of("gradient") {
 		let mut source   = DynamicImage::new_rgb8(screen.width_in_pixels() as u32, screen.height_in_pixels() as u32);
