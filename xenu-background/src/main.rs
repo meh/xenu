@@ -76,14 +76,14 @@ fn main() {
 			.required_unless("gradient")
 			.help("Path to the image to use."))
 		.arg(Arg::with_name("center")
-			.short("C")
+			.short("c")
 			.long("center")
 			.requires("PATH")
 			.conflicts_with("position")
 			.conflicts_with("tile")
 			.help("Center the image."))
 		.arg(Arg::with_name("position")
-			.short("P")
+			.short("p")
 			.long("position")
 			.requires("PATH")
 			.conflicts_with("center")
@@ -92,7 +92,7 @@ fn main() {
 			.validator(is_offset)
 			.help("Set the image at the given position."))
 		.arg(Arg::with_name("tile")
-			.short("T")
+			.short("t")
 			.long("tile")
 			.requires("PATH")
 			.conflicts_with("position")
@@ -119,6 +119,13 @@ fn main() {
 			.takes_value(true)
 			.validator(is_scale)
 			.help("Scale the image by a factor."))
+		.arg(Arg::with_name("crop")
+			.short("C")
+			.long("crop")
+			.requires("PATH")
+			.takes_value(true)
+			.validator(is_area)
+			.help("Crop the image before applying."))
 		.arg(Arg::with_name("opacity")
 			.short("O")
 			.long("opacity")
@@ -179,6 +186,14 @@ fn main() {
 
 			picto::read::from_memory(&buffer)
 		}.expect("failed to open image");
+
+		if matches.is_present("crop") {
+			let area = to_area(matches.value_of("crop").unwrap());
+
+			image = image.view(picto::Area::new()
+				.x(area.x).y(area.y)
+				.width(area.width).height(area.height)).convert();
+		}
 
 		if matches.is_present("fit") {
 			image = if image.width() < width && image.height() < height {
@@ -459,6 +474,28 @@ fn is_scale(arg: String) -> Result<(), String> {
 
 fn to_scale(arg: &str) -> f32 {
 	arg.parse().unwrap()
+}
+
+fn is_area(arg: String) -> Result<(), String> {
+	let parts = arg.split(':').collect::<Vec<_>>();
+
+	if parts.len() == 4 {
+		if parts.iter().all(|s| s.chars().all(|c| c.is_digit(10))) {
+			return Ok(());
+		}
+	}
+
+	Err("areas must be in the X:Y:W:H syntax".into())
+}
+
+fn to_area(arg: &str) -> picto::Area {
+	let mut parts = arg.split(':');
+
+	picto::Area::from(
+		parts.next().unwrap_or("0").parse().unwrap(),
+		parts.next().unwrap_or("0").parse().unwrap(),
+		parts.next().unwrap_or("0").parse().unwrap(),
+		parts.next().unwrap_or("0").parse().unwrap())
 }
 
 fn is_opacity(arg: String) -> Result<(), String> {
