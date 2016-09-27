@@ -14,7 +14,7 @@ xcb      = { version = "0.7" }
 xcb-util = { version = "0.1", features = ["image", "shm"] }
 
 clap  = "2"
-picto = "0.1.2"
+picto = "0.2"
 
 [features]
 default = []

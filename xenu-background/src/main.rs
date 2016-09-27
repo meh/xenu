@@ -149,25 +149,15 @@ fn main() {
 	let opacity = to_opacity(matches.value_of("opacity").unwrap_or("1.0"));
 
 	let mut source: Buffer<u8, Rgb, _> = if let Some(colors) = matches.values_of("gradient") {
-		let mut source   = picto::Buffer::<u8, Rgb, _>::new(width, height);
-		let     gradient = Gradient::new(colors.map(|c| to_color(c)));
-
-		if matches.is_present("vertical") {
-			for (y, color) in (0 .. source.height()).zip(gradient.take(source.height() as usize)) {
-				for x in 0 .. source.width() {
-					source.set(x, y, &color);
-				}
+		picto::Buffer::<u8, Rgb, _>::from_gradient(width, height,
+			if matches.is_present("vertical") {
+				picto::Orientation::Vertical
 			}
-		}
-		else {
-			for (x, color) in (0 .. source.width()).zip(gradient.take(source.width() as usize)) {
-				for y in 0 .. source.height() {
-					source.set(x, y, &color);
-				}
-			}
-		}
+			else {
+				picto::Orientation::Horizontal
+			},
 
-		source
+			Gradient::new(colors.map(|c| to_color(c).into())))
 	}
 	else if let Some(solid) = matches.value_of("solid") {
 		Buffer::from_pixel(width, height, &to_color(solid))
