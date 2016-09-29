@@ -21,8 +21,8 @@ extern crate clap;
 use clap::{App, Arg};
 
 extern crate picto;
-use picto::Buffer;
-use picto::color::{Rgb, Rgba, Gradient, Blend, Limited};
+use picto::buffer;
+use picto::color::{Rgba, Gradient, Blend, Limited};
 use picto::processing::prelude::*;
 
 extern crate xcb;
@@ -148,8 +148,8 @@ fn main() {
 	let height  = screen.height_in_pixels() as u32;
 	let opacity = to_opacity(matches.value_of("opacity").unwrap_or("1.0"));
 
-	let mut source: Buffer<u8, Rgb, _> = if let Some(colors) = matches.values_of("gradient") {
-		picto::Buffer::<u8, Rgb, _>::from_gradient(width, height,
+	let mut source: buffer::Rgb = if let Some(colors) = matches.values_of("gradient") {
+		buffer::Rgb::from_gradient(width, height,
 			if matches.is_present("vertical") {
 				picto::Orientation::Vertical
 			}
@@ -160,14 +160,14 @@ fn main() {
 			Gradient::new(colors.map(|c| to_color(c).into())))
 	}
 	else if let Some(solid) = matches.value_of("solid") {
-		Buffer::from_pixel(width, height, &to_color(solid))
+		buffer::Rgb::from_pixel(width, height, &to_color(solid))
 	}
 	else {
-		Buffer::new(width, height)
+		buffer::Rgb::new(width, height)
 	};
 
 	if let Some(path) = matches.value_of("PATH") {
-		let mut image: Buffer<u8, Rgba, _> = if path != "-" {
+		let mut image: buffer::Rgba = if path != "-" {
 			picto::read::from_path(path)
 		}
 		else {
@@ -187,30 +187,30 @@ fn main() {
 
 		if matches.is_present("fit") {
 			image = if image.width() < width && image.height() < height {
-				image.scale_to::<scaler::Lanczos3, _, _>(width, height)
+				image.scale_to::<scaler::Lanczos3>(width, height)
 			}
 			else {
-				image.scale_to::<scaler::Cubic, _, _>(width, height)
+				image.scale_to::<scaler::Cubic>(width, height)
 			};
 		}
 		else if matches.is_present("resize") {
 			let (width, height) = to_size(matches.value_of("resize").unwrap());
 
 			image = if image.width() < width && image.height() < height {
-				image.resize::<scaler::Lanczos3, _, _>(width, height)
+				image.resize::<scaler::Lanczos3>(width, height)
 			}
 			else {
-				image.resize::<scaler::Cubic, _, _>(width, height)
+				image.resize::<scaler::Cubic>(width, height)
 			};
 		}
 		else if matches.is_present("scale") {
 			let by = to_scale(matches.value_of("scale").unwrap());
 
 			image = if by < 1.0 {
-				image.scale_by::<scaler::Lanczos3, _, _>(by)
+				image.scale_by::<scaler::Lanczos3>(by)
 			}
 			else {
-				image.scale_by::<scaler::Cubic, _, _>(by)
+				image.scale_by::<scaler::Cubic>(by)
 			};
 		}
 
@@ -272,10 +272,10 @@ fn main() {
 		}
 		else {
 			image = if image.width() < width && image.height() < height {
-				image.resize::<scaler::Lanczos3, _, _>(width, height)
+				image.resize::<scaler::Lanczos3>(width, height)
 			}
 			else {
-				image.resize::<scaler::Cubic, _, _>(width, height)
+				image.resize::<scaler::Cubic>(width, height)
 			};
 
 			for (x, y, mut px) in source.pixels_mut() {
@@ -309,7 +309,7 @@ fn main() {
 }
 
 /// Set the background for the screen from the given image.
-fn set(c: &xcb::Connection, screen: &xcb::Screen, source: Buffer<u8, Rgb, Vec<u8>>) {
+fn set(c: &xcb::Connection, screen: &xcb::Screen, source: buffer::Rgb) {
 	// Create a shared image to store the pixels.
 	let mut image = xcbu::image::shm::create(c, screen.root_depth(),
 		screen.width_in_pixels(), screen.height_in_pixels())
